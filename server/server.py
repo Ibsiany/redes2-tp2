@@ -11,44 +11,55 @@ dest = ('localhost', 6000)
 
 print('Socket UDP na porta 5000')
 
-msg, cliente = udp.recvfrom(1024)
+password, cliente = udp.recvfrom(1024)
 
-sentence = msg.decode('ascii')
+sentence = password.decode('ascii')
 
 print(cliente, sentence)
 
-udp.sendto(bytes('MSG RECEIVED', 'ascii'), dest)
+if(sentence == '1234'):
+    udp.sendto(bytes('PASSWORD OK', 'ascii'), dest)
 
-partition_length, cliente = udp.recvfrom(1024)
+    msg, cliente = udp.recvfrom(1024)
 
-partition_number = int(partition_length.decode('ascii'))
+    sentence = msg.decode('ascii')
 
-array_size = math.ceil(len(sentence) / partition_number)
+    print(cliente, sentence)
 
-udp.sendto(bytes(str(array_size), 'ascii'), dest)
+    udp.sendto(bytes('MSG RECEIVED', 'ascii'), dest)
 
-array = []
+    partition_length, cliente = udp.recvfrom(1024)
 
-for i in range(0, array_size):
-    array.append(sentence[(i * partition_number):((i * partition_number) + partition_number)])
+    partition_number = int(partition_length.decode('ascii'))
 
-print(array)
+    array_size = math.ceil(len(sentence) / partition_number)
 
-for i in range(array_size):
-    udp.sendto(bytes(str(i) + '|' + array[i], 'ascii'), dest)
+    udp.sendto(bytes(str(array_size), 'ascii'), dest)
 
-udp.sendto(bytes('end', 'ascii'), dest)
+    array = []
 
-indexes, cliente = udp.recvfrom(1024)
+    for i in range(0, array_size):
+        array.append(sentence[(i * partition_number):((i * partition_number) + partition_number)])
 
-print(indexes.decode('ascii'))
+    print(array)
 
-while indexes.decode('ascii') != 'fin':
-    indexes_array = indexes.decode('ascii').split('|')
-    for i in indexes_array:
-        print(i + '|' + array[int(i)])
-        udp.sendto(bytes(i + '|' + array[int(i)], 'ascii'), dest)
-    udp.sendto(bytes('fin?', 'ascii'), dest)
+    for i in range(array_size):
+        udp.sendto(bytes(str(i) + '|' + array[i], 'ascii'), dest)
+
+    udp.sendto(bytes('end', 'ascii'), dest)
+
     indexes, cliente = udp.recvfrom(1024)
 
-udp.close()
+    print(indexes.decode('ascii'))
+
+    while indexes.decode('ascii') != 'fin':
+        indexes_array = indexes.decode('ascii').split('|')
+        for i in indexes_array:
+            print(i + '|' + array[int(i)])
+            udp.sendto(bytes(i + '|' + array[int(i)], 'ascii'), dest)
+        udp.sendto(bytes('fin?', 'ascii'), dest)
+        indexes, cliente = udp.recvfrom(1024)
+
+    udp.close()
+else:
+    udp.sendto(bytes('PASSWORD INCORRECT', 'ascii'), dest)
