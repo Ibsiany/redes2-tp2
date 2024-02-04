@@ -1,6 +1,6 @@
-import math
 import socket
 import os
+import base64
 
 PASSWORD = '1234' # Senha de acesso ao servidor
 HOST = ''  # Endereco IP do Servidor
@@ -37,14 +37,21 @@ def check_password(sentence): # Função de verificação de senha
 def select_file(filename):  # Função para selectionar arquivo
     if filename not in files:
         udp.sendto(bytes('Arquivo nao encontrado.', 'ascii'), dest)
-        return False
+        
+        raise Exception('Arquivo nao encontrado.')
 
-    udp.sendto(bytes('Arquivo sera enviado.', 'ascii'), dest)
+    udp.sendto(bytes('ENVIANDO O ARQUIVO: ' + filename, 'ascii'), dest)
     send_file(filename);
 
 def send_file(filename): # Função para enviar o arquivo selecionado
-    print(filename)    
-    return True;
+    try:
+        with open(diretorio+"/"+filename, "rb") as arquivo:
+            conteudo_arquivo = arquivo.read(2048)
+            arquivo_codificado = base64.b64encode(conteudo_arquivo)
+            
+            udp.sendto(bytes(arquivo_codificado.decode("utf-8"), 'ascii'), dest)
+    except FileNotFoundError:
+        raise Exception("O arquivo {filename} não foi encontrado.")
 
 while True:
     try:
@@ -65,7 +72,8 @@ while True:
         
         print('erro: ' + str(e))
         
-        continue
-
+        if(str(e) != '[WinError 10040] Uma mensagem enviada em um soquete de datagrama era maior do que o buffer de mensagens internas ou excedia algum outro limite da rede, ou o buffer usado para receber um datagrama era menor do que o próprio datagrama'):
+            raise Exception(str(e))
+        
     
 
