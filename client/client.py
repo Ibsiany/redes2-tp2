@@ -10,8 +10,6 @@ udp.bind(('', 6000))
 
 print('Socket UDP na porta 6000')
 
-print('Para sair use CTRL+C\n')
-
 msg = input('Digite a mensagem: ')
 udp.sendto(bytes(msg, 'ascii'), dest)
 
