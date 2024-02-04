@@ -46,12 +46,39 @@ def select_file(filename):  # Função para selectionar arquivo
 def send_file(filename): # Função para enviar o arquivo selecionado
     try:
         with open(diretorio+"/"+filename, "rb") as arquivo:
-            conteudo_arquivo = arquivo.read(2048)
+            conteudo_arquivo = arquivo.read()
             arquivo_codificado = base64.b64encode(conteudo_arquivo)
             
-            udp.sendto(bytes(arquivo_codificado.decode("utf-8"), 'ascii'), dest)
-    except FileNotFoundError:
-        raise Exception("O arquivo {filename} não foi encontrado.")
+            file = arquivo_codificado.decode("utf-8")
+            
+            length = len(file)
+            tam = len(file)
+            
+            initial = 0
+            final = 1023
+            
+            while length > 0:
+                udp.sendto(bytes(file[initial:final], 'ascii'), dest)
+                initial = final
+                if(length < 1024):
+                    final = final + length
+                else:
+                    final = final+1024
+                if(length <= 1024):
+                    length = length - length
+                else:
+                    length = length - 1024
+                
+                print('PACOTE ENVIADO')
+                
+            print(tam)
+            print('Acabou no server.')
+            udp.sendto(bytes('FIM', 'ascii'), dest)
+            print('caralho')
+                
+    except Exception  as e:
+        print(str(e))
+        raise Exception("Falha ao enviar arquivo {filename}.")
 
 while True:
     try:

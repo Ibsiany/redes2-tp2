@@ -8,19 +8,41 @@ udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 dest = (HOST, PORT)
 diretorio = './files'
 
+
 def receber_arquivo(filename):
-    base64_string, cliente = udp.recvfrom(5 * 1024)
+    buffer = []
+    
+    base64_decode = ''
+    
+    while base64_decode != 'FIM':
+        base64_string, cliente = udp.recvfrom(5 * 1024)
+        
+        base64_decode = base64_string.decode('ascii')
+        
+        if(base64_decode != 'FIM'):
+            buffer.append(base64_decode)
+            print('PACOTE RECEBIDO')
+        else:
+            print('Acabou')
+            
+            
+    
+    print('Acabou no client.')
     
     try:
         caminho_completo = os.path.join(diretorio, filename)
 
+        print(len(''.join(buffer)))
+        
         with open(caminho_completo, "wb") as arquivo:
-            arquivo_decodificado = base64.b64decode(base64_string)
+            bufferIsString = ''.join(buffer)
+            
+            arquivo_decodificado = base64.b64decode(bufferIsString)
             arquivo.write(arquivo_decodificado)
 
         print ("Arquivo salvo em: {caminho_completo}")
     except Exception as e:
-        raise Exception("Erro ao salvar o arquivo: {str(e)}")
+        raise Exception("Erro ao salvar o arquivo:"+str(e))
 
 # Definindo uma porta para ser ouvida
 udp.bind(('', 6000))
