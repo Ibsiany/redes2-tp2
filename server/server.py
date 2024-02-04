@@ -74,7 +74,6 @@ def send_file(filename): # Função para enviar o arquivo selecionado
             print(tam)
             print('Acabou no server.')
             udp.sendto(bytes('FIM', 'ascii'), dest)
-            print('caralho')
                 
     except Exception  as e:
         print(str(e))
