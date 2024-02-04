@@ -47,18 +47,25 @@ def send_file(filename): # Função para enviar o arquivo selecionado
     return True;
 
 while True:
-    message, cliente = udp.recvfrom(1024)
-    sentence = message.decode('ascii')
-    print(cliente, sentence)    
+    try:
+        message, cliente = udp.recvfrom(1024)
+        sentence = message.decode('ascii')
+        print(cliente, sentence)    
 
-    idetify = sentence.split("|")[0]
-    message = sentence.split('|')[1]
+        idetify = sentence.split("|")[0]
+        message = sentence.split('|')[1]
 
-    match idetify:
-        case "password":
-            check_password(message)
-        case 'select_file':
-            select_file(message)
+        match idetify:
+            case "password":
+                check_password(message)
+            case 'select_file':
+                select_file(message)
+    except Exception as e:
+        udp.sendto(bytes('Servidor com erro.', 'ascii'), dest)
+        
+        print('erro: ' + str(e))
+        
+        continue
 
     
 

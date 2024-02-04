@@ -30,8 +30,7 @@ else:
         msg_arquivo, cliente = udp.recvfrom(1024)
         print(cliente, msg_arquivo.decode('ascii'))
 
-        
-
     except Exception as e:
-        print('erro errado: ' + str(e))
+        print('Erro interno' + str(e))
+
 
