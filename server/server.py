@@ -1,49 +1,54 @@
-# Python3 program imitating a clock server
- 
+import math
 import socket
-import datetime
-import ntplib
-import time
-   
-# função para iniciar o servidor de relógio
-def initiateClockServer():
- 
-    s = socket.socket()
-    print("Socket successfully created")
-       
-    # Definir a porta do servidor
-    port = 8000
- 
-    s.bind(('', port))
-      
-    # Definir o número máximo de conexões
-    s.listen(5)     
-    print("Socket is listening...")
 
-    # Loop infinito para aceitar conexões
-    while True:
-        #pegue o horario atual do ntp
-        ntp_server = 'pool.ntp.org'
-        ntp_client = ntplib.NTPClient()
+HOST = ''  # Endereco IP do Servidor
+PORT = 5000  # Porta que o Servidor esta
+udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+orig = (HOST, PORT)
+udp.bind(orig)
 
-        # Obtém o tempo atual a partir do servidor NTP
-        response = ntp_client.request(ntp_server)
+dest = ('localhost', 6000)
 
-        # Obtém o timestamp da resposta e converte para a hora local
-        ntp_time = time.localtime(response.tx_time)
+print('Socket UDP na porta 5000')
 
-        time_string = time.strftime('%Y-%m-%d %H:%M:%S', ntp_time)
-         
-       # Aceitar conexões do cliente
-        connection, address = s.accept()     
-        print('Server connected to', address)
-       
-       # Enviar a hora atual para o cliente
-        connection.send(str(time_string).encode())
-       
-       # Fechar a conexão
-        connection.close()
- 
- 
-if __name__ == '__main__':
-    initiateClockServer()
+msg, cliente = udp.recvfrom(1024)
+
+sentence = msg.decode('ascii')
+
+print(cliente, sentence)
+
+udp.sendto(bytes('MSG RECEIVED', 'ascii'), dest)
+
+partition_length, cliente = udp.recvfrom(1024)
+
+partition_number = int(partition_length.decode('ascii'))
+
+array_size = math.ceil(len(sentence) / partition_number)
+
+udp.sendto(bytes(str(array_size), 'ascii'), dest)
+
+array = []
+
+for i in range(0, array_size):
+    array.append(sentence[(i * partition_number):((i * partition_number) + partition_number)])
+
+print(array)
+
+for i in range(array_size):
+    udp.sendto(bytes(str(i) + '|' + array[i], 'ascii'), dest)
+
+udp.sendto(bytes('end', 'ascii'), dest)
+
+indexes, cliente = udp.recvfrom(1024)
+
+print(indexes.decode('ascii'))
+
+while indexes.decode('ascii') != 'fin':
+    indexes_array = indexes.decode('ascii').split('|')
+    for i in indexes_array:
+        print(i + '|' + array[int(i)])
+        udp.sendto(bytes(i + '|' + array[int(i)], 'ascii'), dest)
+    udp.sendto(bytes('fin?', 'ascii'), dest)
+    indexes, cliente = udp.recvfrom(1024)
+
+udp.close()

@@ -1,89 +1,94 @@
 import socket
-import datetime
-import time
-import os
-from dateutil import parser
-from timeit import default_timer as timer
-import win32api
 
-# função para sincronizar o tempo do cliente com o servidor
-def synchronizeTime():
+HOST = 'localhost'  # Endereco IP do Servidor
+PORT = 5000  # Porta que o Servidor esta
+udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+dest = (HOST, PORT)
 
-    i = 0
+# Definindo uma porta para ser ouvida
+udp.bind(('', 6000))
 
-    while True:     
-        i+=1
-        print("\nRequisicao: " + str(i))
-        s = socket.socket()
-	
-	    # porta do servidor
-        port = 8000	
-	
-	    # conectar ao servidor
-        s.connect(('192.168.0.105', port))
-        request_time = timer()
-	
-	    # receber a hora do servidor
-        server_time = parser.parse(s.recv(1024).decode())
-        response_time = timer()
-        actual_time = datetime.datetime.now()
-        print("Hora do servidor: " + str(server_time))
-        process_delay_latency = response_time - request_time
-        print("Tempo de resposta: " + str(process_delay_latency) + " segundos")
-        print("Hora atual do cliente: " + str(actual_time))
-	
-	    # sincronizar o tempo do cliente com o servidor
-        client_time = server_time + datetime.timedelta(seconds = (process_delay_latency) / 2)
-        print("Horário do cliente de processo sincronizado: " + str(client_time))
-	
-        # calcular o erro de sincronização
-        error = actual_time - client_time
-        print("Erro de sincronização : "+ str(error.total_seconds()) + " seconds")
+print('Socket UDP na porta 6000')
 
-        s.close()	
+print('Para sair use CTRL+X\n')
 
-        # verifica o S.O do cliente
-        if os.name == 'nt':
-            error_seconds = (datetime.datetime.now() - client_time).total_seconds()
-            if abs(error_seconds/1800) < 1:
-                client_time = datetime.timedelta(hours=3) + client_time
-                win32api.SetSystemTime(int(client_time.year), int(client_time.month), 0, int(client_time.day), int(client_time.hour), int(client_time.minute), int(client_time.second), 0)
-            else:
-                while abs(error_seconds) > 1:
-                    if abs(error_seconds/1800) < 1:
-                        client_time = datetime.timedelta(hours=3) + client_time
-                        win32api.SetSystemTime(int(client_time.year), int(client_time.month), 0, int(client_time.day), int(client_time.hour), int(client_time.minute), int(client_time.second), 0)
-                        break
-                    if error_seconds > 1:
-                        new_time = datetime.datetime.now() + datetime.timedelta(hours=2, minutes=30)
-                        print('Atrasando relógio: ')
-                        win32api.SetSystemTime(int(new_time.year), int(new_time.month), 0, int(new_time.day), int(new_time.hour), int(new_time.minute), int(new_time.second), 0)
-                    else:
-                        new_time = datetime.datetime.now() + datetime.timedelta(minutes=30) + datetime.timedelta(hours=3)
-                        print('Adiantando relógio: ')
-                        win32api.SetSystemTime(int(new_time.year), int(new_time.month), 0, int(new_time.day), int(new_time.hour), int(new_time.minute), int(new_time.second), 0)
-                    print("Atualização gradual do cliente. Erro: {} segundos".format(error_seconds))
-                    time.sleep(5)
-                    error_seconds = (datetime.datetime.now() - client_time).total_seconds()
-        else:
-            error_seconds = (datetime.datetime.now() - client_time).total_seconds()
-            if abs(error_seconds/1800) < 1:
-                os.system('sudo date -s "{}"'.format(client_time))
-            else:
-                while abs(error_seconds) > 1:
-                    if abs(error_seconds/1800) < 1:
-                        os.system('sudo date -s "{}"'.format(client_time))
-                        break
-                    if error_seconds > 1:
-                        os.system('sudo date -s "{}"'.format(datetime.datetime.now() - datetime.timedelta(seconds=1800)))
-                    else:
-                        os.system('sudo date -s "{}"'.format(datetime.datetime.now() + datetime.timedelta(seconds=1800)))
-                    print("Atualização gradual do cliente. Erro: {} segundos".format(error_seconds))
-                    time.sleep(5)
+msg = input('Digite a mensagem: ')
+udp.sendto(bytes(msg, 'ascii'), dest)
 
-                    error_seconds = (datetime.datetime.now() - client_time).total_seconds()
-        time.sleep(10)
-	
+msg_confirmation, cliente = udp.recvfrom(1024)
+print(cliente, msg_confirmation.decode('ascii'))
 
-if __name__ == '__main__':
-	synchronizeTime()
+partition_length = input('Digite o tamanho das particoes: ')
+udp.sendto(bytes(partition_length, 'ascii'), dest)
+
+received_size, cliente = udp.recvfrom(1024)
+
+array_size = int(received_size.decode('ascii'))
+
+print(cliente, array_size)
+
+array = []
+
+for i in range(0, array_size):
+    array.append('')
+
+print(array)
+
+values = ['']
+while values[0] != 'end':
+    payload, cliente = udp.recvfrom(1024)
+    values = payload.decode('ascii').split('|', 1)
+    if values[0] != 'end':
+        if (int(values[0]) >= 0) & (int(values[0]) < array_size):
+            array[int(values[0])] = values[1]
+
+print(array)
+
+fault_indexes = []
+
+for i in range(len(array)):
+    if array[i] == '':
+        fault_indexes.append(i)
+
+print(fault_indexes)
+
+while len(fault_indexes) > 0:
+    fault_msg = ''
+    for i in range(len(fault_indexes)):
+        fault_msg = fault_msg + str(fault_indexes[i])
+        if i != len(fault_indexes) - 1:
+            fault_msg = fault_msg + '|'
+
+    udp.sendto(bytes(fault_msg, 'ascii'), dest)
+
+    values = ['']
+
+    while values[0] != 'fin?':
+        payload, cliente = udp.recvfrom(1024)
+        values = payload.decode('ascii').split('|')
+        print(values)
+        if values[0] != 'fin?':
+            if (int(values[0]) >= 0) & (int(values[0]) < array_size):
+                array[int(values[0])] = values[1]
+
+    print(array)
+
+    fault_indexes = []
+    for i in range(len(array)):
+        if array[i] == '':
+            fault_indexes.append(i)
+
+
+
+udp.sendto(bytes('fin', 'ascii'), dest)
+
+udp.close()
+print('Conexao finalizada')
+
+mensagem = ''
+
+for fragment in array:
+    mensagem = mensagem + fragment
+
+print("Mensagem recebida: ")
+print(mensagem)
