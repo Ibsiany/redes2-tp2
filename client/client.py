@@ -23,16 +23,10 @@ def receber_arquivo(filename):
             buffer.append(base64_decode)
             print('PACOTE RECEBIDO')
         else:
-            print('Acabou')
+            print('FIM')
             
-            
-    
-    print('Acabou no client.')
-    
     try:
         caminho_completo = os.path.join(diretorio, filename)
-
-        print(len(''.join(buffer)))
         
         with open(caminho_completo, "wb") as arquivo:
             bufferIsString = ''.join(buffer)
@@ -40,7 +34,7 @@ def receber_arquivo(filename):
             arquivo_decodificado = base64.b64decode(bufferIsString)
             arquivo.write(arquivo_decodificado)
 
-        print ("Arquivo salvo em: {caminho_completo}")
+        print ("Arquivo salvo em: " + caminho_completo)
     except Exception as e:
         raise Exception("Erro ao salvar o arquivo:"+str(e))
 
