@@ -26,7 +26,6 @@ def listFiles(): # Função para listar arquivos disponíveis
     
     return array;
 
-
 def check_password(sentence): # Função de verificação de senha
     if(sentence == PASSWORD):
         udp.sendto(bytes('SENHA OK', 'ascii'), dest)
