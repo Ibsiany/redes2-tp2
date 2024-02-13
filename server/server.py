@@ -10,6 +10,9 @@ orig = (HOST, PORT)
 udp.bind(orig)
 diretorio = './files'
 
+timeout_ms = 2000
+package_size = (1460) - 1;
+
 dest = ('localhost', 6000)
 
 print('Socket UDP na porta 5000')
@@ -41,6 +44,33 @@ def select_file(filename):  # Função para selectionar arquivo
     udp.sendto(bytes('ENVIANDO O ARQUIVO: ' + filename, 'ascii'), dest)
     send_file(filename);
 
+def segmentar_arquivo(file): # Função para segmentar o arquivo
+    tam = len(file)
+    initial = 0
+    final = package_size
+
+    arquivo_segmentado = []
+    while tam > 0:
+        if(tam >= package_size):
+            arquivo_segmentado.append(file[initial:initial+package_size])
+            tam = tam - package_size
+            initial = final
+            filnal = final + package_size
+        else: 
+            arquivo_segmentado.append(file[initial:initial+tam])
+            tam = tam - tam
+            initial = final
+            final = final + tam
+        
+    return arquivo_segmentado
+
+def calculate_checksum(data):
+    checksum = 0
+    for byte in data:
+        checksum += byte
+    checksum = (checksum & 0xFF) + (checksum >> 8)
+    return (~checksum) & 0xFF
+
 def send_file(filename): # Função para enviar o arquivo selecionado
     try:
         with open(diretorio+"/"+filename, "rb") as arquivo:
@@ -49,28 +79,14 @@ def send_file(filename): # Função para enviar o arquivo selecionado
             
             file = arquivo_codificado.decode("utf-8")
             
-            length = len(file)
-            tam = len(file)
+            arquivo_segmentado = segmentar_arquivo(file)
+            print('Arquivo segmentado' + str(len(arquivo_segmentado)))
             
-            initial = 0
-            final = 1023
+            for segmento in arquivo_segmentado:
+                checksum = calculate_checksum(segmento.encode('ascii'))
+                udp.sendto(bytes(str(checksum) + "|" + segmento, 'ascii'), dest)      
             
-            while length > 0:
-                udp.sendto(bytes(file[initial:final], 'ascii'), dest)
-                initial = final
-                if(length < 1024):
-                    final = final + length
-                else:
-                    final = final+1024
-                if(length <= 1024):
-                    length = length - length
-                else:
-                    length = length - 1024
-                
-                print('PACOTE ENVIADO')
-                
-            print(tam)
-            print('Acabou no server.')
+            print('ARQUIVO ENVIADO.')
             udp.sendto(bytes('FIM', 'ascii'), dest)
                 
     except Exception  as e:
