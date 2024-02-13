@@ -66,6 +66,13 @@ def segmentar_arquivo(file): # Função para segmentar o arquivo
         
     return arquivo_segmentado
 
+def calculate_checksum(data):
+    checksum = 0
+    for byte in data:
+        checksum += byte
+    checksum = (checksum & 0xFF) + (checksum >> 8)
+    return (~checksum) & 0xFF
+
 def send_file(filename): # Função para enviar o arquivo selecionado
     try:
         with open(diretorio+"/"+filename, "rb") as arquivo:
@@ -78,9 +85,9 @@ def send_file(filename): # Função para enviar o arquivo selecionado
             print('Arquivo segmentado' + str(len(arquivo_segmentado)))
             
             for segmento in arquivo_segmentado:
-                udp.sendto(bytes(segmento, 'ascii'), dest)      
-                print('PACOTE ENVIADO')
-
+                checksum = calculate_checksum(segmento.encode('ascii'))
+                udp.sendto(bytes(str(checksum) + "|" + segmento, 'ascii'), dest)      
+            
             print('ARQUIVO ENVIADO.')
             udp.sendto(bytes('FIM', 'ascii'), dest)
                 
