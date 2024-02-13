@@ -23,8 +23,6 @@ def listFiles(): # Função para listar arquivos disponíveis
     
     return array;
 
-files = listFiles();
-
 
 def check_password(sentence): # Função de verificação de senha
     if(sentence == PASSWORD):
