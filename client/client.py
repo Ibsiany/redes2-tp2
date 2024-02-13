@@ -36,7 +36,7 @@ def receber_arquivo(filename):
             print('FIM')
             
     try:
-        caminho_completo = os.path.join(diretorio, filename)
+        caminho_completo = os.path.normpath(os.path.join(diretorio, filename))
         
         with open(caminho_completo, "wb") as arquivo:
             bufferIsString = ''.join(buffer)
