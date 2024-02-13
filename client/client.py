@@ -8,6 +8,12 @@ udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 dest = (HOST, PORT)
 diretorio = './files'
 
+def calculate_checksum(data):
+    checksum = 0
+    for byte in data:
+        checksum += byte
+    checksum = (checksum & 0xFF) + (checksum >> 8)
+    return (~checksum) & 0xFF
 
 def receber_arquivo(filename):
     buffer = []
@@ -16,23 +22,21 @@ def receber_arquivo(filename):
     
     while base64_decode != 'FIM':
         base64_string, cliente = udp.recvfrom(5 * 1024)
-        
         base64_decode = base64_string.decode('ascii')
         
         if(base64_decode != 'FIM'):
-            buffer.append(base64_decode)
-            print('PACOTE RECEBIDO')
+            check_sum, base64_decode = base64_decode.split('|')
+            if(check_sum != str(calculate_checksum(base64_decode.encode('ascii')))):
+                print('PACOTE CORROMPIDO')
+                continue
+            else:
+                buffer.append(base64_decode)
+                print('PACOTE RECEBIDO')
         else:
-            print('Acabou')
+            print('FIM')
             
-            
-    
-    print('Acabou no client.')
-    
     try:
-        caminho_completo = os.path.join(diretorio, filename)
-
-        print(len(''.join(buffer)))
+        caminho_completo = os.path.normpath(os.path.join(diretorio, filename))
         
         with open(caminho_completo, "wb") as arquivo:
             bufferIsString = ''.join(buffer)
@@ -40,7 +44,7 @@ def receber_arquivo(filename):
             arquivo_decodificado = base64.b64decode(bufferIsString)
             arquivo.write(arquivo_decodificado)
 
-        print ("Arquivo salvo em: {caminho_completo}")
+        print ("Arquivo salvo em: " + caminho_completo)
     except Exception as e:
         raise Exception("Erro ao salvar o arquivo:"+str(e))
 
