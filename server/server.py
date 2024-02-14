@@ -57,7 +57,9 @@ def segmentar_arquivo(file, partition_number): # Função para segmentar o arqui
     
     if(array_size <= package_size):
         package_size = array_size
-        
+    else:
+         print('\nNúmero de partições informado incompátivel, será realizado o particionamento padrão. \n')
+         
     final = package_size
 
     arquivo_segmentado = []
