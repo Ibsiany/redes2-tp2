@@ -94,7 +94,10 @@ def send_file(filename): # Função para enviar o arquivo selecionado
             for i in range(0, len(arquivo_segmentado)):
                 checksum = calculate_checksum(arquivo_segmentado[i].encode('ascii'))
 
-                udp.sendto(bytes(str(seq_num) + "|" + str(checksum) + "|" + arquivo_segmentado[i], 'ascii'), dest)
+                if(random.random() < 0.05):
+                    udp.sendto(bytes(str(seq_num) + "|" + str(checksum) + "|" + 'currpted_data', 'ascii'), dest)
+                else:
+                    udp.sendto(bytes(str(seq_num) + "|" + str(checksum) + "|" + arquivo_segmentado[i], 'ascii'), dest)
 
                 ack, cliente = udp.recvfrom(1024)
 
