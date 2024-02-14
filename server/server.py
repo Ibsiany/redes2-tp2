@@ -56,7 +56,7 @@ def segmentar_arquivo(file): # Função para segmentar o arquivo
             arquivo_segmentado.append(file[initial:initial+package_size])
             tam = tam - package_size
             initial = final
-            filnal = final + package_size
+            final = final + package_size
         else: 
             arquivo_segmentado.append(file[initial:initial+tam])
             tam = tam - tam
