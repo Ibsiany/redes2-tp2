@@ -17,21 +17,24 @@ def calculate_checksum(data):
 
 def receber_arquivo(filename):
     buffer = []
-    
     base64_decode = ''
+    expected_seq_num = 0
     
     while base64_decode != 'FIM':
         base64_string, cliente = udp.recvfrom(5 * 1024)
-        base64_decode = base64_string.decode('ascii')
+        seq_num, base64_decode = base64_string.decode('ascii').split('|', 1)
         
-        if(base64_decode != 'FIM'):
+        if(base64_decode != 'FIM|FIM'):
             check_sum, base64_decode = base64_decode.split('|')
-            if(check_sum != str(calculate_checksum(base64_decode.encode('ascii')))):
-                print('PACOTE CORROMPIDO')
+            if(check_sum != str(calculate_checksum(base64_decode.encode('ascii'))) or int(seq_num) != expected_seq_num):
+                print('PACOTE CORROMPIDO OU FORA DE ORDEM')
+                udp.sendto(bytes(str(expected_seq_num) + '|NACK', 'ascii'), dest)  # Send NACK
                 continue
             else:
                 buffer.append(base64_decode)
                 print('PACOTE RECEBIDO')
+                udp.sendto(bytes(str(expected_seq_num) + '|ACK', 'ascii'), dest)  # Send ACK
+                expected_seq_num += 1
         else:
             print('FIM')
             

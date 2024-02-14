@@ -1,6 +1,7 @@
 import socket
 import os
 import base64
+import random
 
 PASSWORD = '1234' # Senha de acesso ao servidor
 HOST = ''  # Endereco IP do Servidor
@@ -72,7 +73,7 @@ def calculate_checksum(data):
     checksum = (checksum & 0xFF) + (checksum >> 8)
     return (~checksum) & 0xFF
 
-def send_file(filename): # Função para enviar o arquivo selecionado
+def send_file(filename):
     try:
         with open(diretorio+"/"+filename, "rb") as arquivo:
             conteudo_arquivo = arquivo.read()
@@ -83,12 +84,22 @@ def send_file(filename): # Função para enviar o arquivo selecionado
             arquivo_segmentado = segmentar_arquivo(file)
             print('Arquivo segmentado' + str(len(arquivo_segmentado)))
             
+            seq_num = 0
             for segmento in arquivo_segmentado:
                 checksum = calculate_checksum(segmento.encode('ascii'))
-                udp.sendto(bytes(str(checksum) + "|" + segmento, 'ascii'), dest)      
+
+                udp.sendto(bytes(str(seq_num) + "|" + str(checksum) + "|" + segmento, 'ascii'), dest)
+
+                ack, cliente = udp.recvfrom(1024)
+                while ack.decode('ascii').split('|')[0] != str(seq_num):
+                    print('enviando pacote corrompido...')
+                    udp.sendto(bytes(str(seq_num) + "|" + str(checksum) + "|" + segmento, 'ascii'), dest)
+                    ack, cliente = udp.recvfrom(1024)
+                
+                seq_num += 1
             
             print('ARQUIVO ENVIADO.')
-            udp.sendto(bytes('FIM', 'ascii'), dest)
+            udp.sendto(bytes('FIM|FIM|FIM', 'ascii'), dest)
                 
     except Exception  as e:
         print(str(e))
