@@ -70,6 +70,9 @@ else:
         arquivo = input('Digite o arquivo desejado: ')
         udp.sendto(bytes('select_file|'+arquivo, 'ascii'), dest)
 
+        partition_number = input('Digite a quantidade de partições: ')
+        udp.sendto(bytes('select_partition|'+partition_number, 'ascii'), dest)
+
         msg_arquivo, cliente = udp.recvfrom(5 * 1024 * 1024)
         print(cliente, msg_arquivo.decode('ascii'))
         

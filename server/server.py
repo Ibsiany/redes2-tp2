@@ -1,6 +1,7 @@
 import socket
 import os
 import base64
+import math
 
 PASSWORD = '1234' # Senha de acesso ao servidor
 HOST = ''  # Endereco IP do Servidor
@@ -11,7 +12,8 @@ udp.bind(orig)
 diretorio = './files'
 
 timeout_ms = 2000
-package_size = (1460) - 1;
+
+file_name = ''
 
 dest = ('localhost', 6000)
 
@@ -37,17 +39,25 @@ def check_password(sentence): # Função de verificação de senha
         udp.sendto(bytes('SENHA INCORRETA', 'ascii'), dest)
 
 def select_file(filename):  # Função para selectionar arquivo
+    global file_name
+    
+    file_name = filename
     if filename not in files:
         udp.sendto(bytes('Arquivo nao encontrado.', 'ascii'), dest)
         
         raise Exception('Arquivo nao encontrado.')
 
-    udp.sendto(bytes('ENVIANDO O ARQUIVO: ' + filename, 'ascii'), dest)
-    send_file(filename);
-
-def segmentar_arquivo(file): # Função para segmentar o arquivo
+    udp.sendto(bytes('ARQUIVO ENCONTRADO: ' + filename, 'ascii'), dest)
+    
+def segmentar_arquivo(file, partition_number): # Função para segmentar o arquivo
+    package_size = (1460) - 1
     tam = len(file)
+    array_size = math.ceil(tam / partition_number)
     initial = 0
+    
+    if(array_size <= package_size):
+        package_size = array_size
+        
     final = package_size
 
     arquivo_segmentado = []
@@ -72,7 +82,7 @@ def calculate_checksum(data):
     checksum = (checksum & 0xFF) + (checksum >> 8)
     return (~checksum) & 0xFF
 
-def send_file(filename): # Função para enviar o arquivo selecionado
+def send_file(filename,partition_number): # Função para enviar o arquivo selecionado
     try:
         with open(diretorio+"/"+filename, "rb") as arquivo:
             conteudo_arquivo = arquivo.read()
@@ -80,7 +90,7 @@ def send_file(filename): # Função para enviar o arquivo selecionado
             
             file = arquivo_codificado.decode("utf-8")
             
-            arquivo_segmentado = segmentar_arquivo(file)
+            arquivo_segmentado = segmentar_arquivo(file,partition_number)
             print('Arquivo segmentado' + str(len(arquivo_segmentado)))
             
             for segmento in arquivo_segmentado:
@@ -102,12 +112,15 @@ while True:
 
         idetify = sentence.split("|")[0]
         message = sentence.split('|')[1]
+        
 
         match idetify:
             case "password":
                 check_password(message)
             case 'select_file':
                 select_file(message)
+            case 'select_partition':
+                send_file(file_name, int(message))
     except Exception as e:
         udp.sendto(bytes('Servidor com erro.', 'ascii'), dest)
         
