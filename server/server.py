@@ -11,7 +11,7 @@ udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 orig = (HOST, PORT)
 udp.bind(orig)
 diretorio = './files'
-
+package_size = (1460) - 1
 timeout_ms = 2000
 
 file_name = ''
@@ -49,18 +49,11 @@ def select_file(filename):  # Função para selectionar arquivo
         raise Exception('Arquivo nao encontrado.')
 
     udp.sendto(bytes('ARQUIVO ENCONTRADO: ' + filename, 'ascii'), dest)
+    send_file(file_name)
     
-def segmentar_arquivo(file, partition_number): # Função para segmentar o arquivo
-    package_size = (1460) - 1
+def segmentar_arquivo(file): # Função para segmentar o arquivo
     tam = len(file)
-    array_size = math.ceil(tam / partition_number)
-    initial = 0
-    
-    if(array_size <= package_size):
-        package_size = array_size
-    else:
-         print('\nNúmero de partições informado incompátivel, será realizado o particionamento padrão. \n')
-         
+    initial = 0         
     final = package_size
 
     arquivo_segmentado = []
@@ -85,7 +78,7 @@ def calculate_checksum(data):
     checksum = (checksum & 0xFF) + (checksum >> 8)
     return (~checksum) & 0xFF
 
-def send_file(filename,partition_number): # Função para enviar o arquivo selecionado
+def send_file(filename): # Função para enviar o arquivo selecionado
     try:
         with open(diretorio+"/"+filename, "rb") as arquivo:
             conteudo_arquivo = arquivo.read()
@@ -93,7 +86,7 @@ def send_file(filename,partition_number): # Função para enviar o arquivo selec
             
             file = arquivo_codificado.decode("utf-8")
             
-            arquivo_segmentado = segmentar_arquivo(file,partition_number)
+            arquivo_segmentado = segmentar_arquivo(file)
             print('Arquivo segmentado' + str(len(arquivo_segmentado)))
             
             seq_num = 0
@@ -136,8 +129,6 @@ while True:
                 check_password(message)
             case 'select_file':
                 select_file(message)
-            case 'select_partition':
-                send_file(file_name, int(message))
     except Exception as e:
         udp.sendto(bytes('Servidor com erro.', 'ascii'), dest)
         
