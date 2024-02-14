@@ -20,7 +20,7 @@ def receber_arquivo(filename):
     base64_decode = ''
     expected_seq_num = 0
     
-    while base64_decode != 'FIM':
+    while base64_decode != 'FIM|FIM':
         base64_string, cliente = udp.recvfrom(5 * 1024)
         seq_num, base64_decode = base64_string.decode('ascii').split('|', 1)
         
