@@ -85,15 +85,19 @@ def send_file(filename):
             print('Arquivo segmentado' + str(len(arquivo_segmentado)))
             
             seq_num = 0
-            for segmento in arquivo_segmentado:
-                checksum = calculate_checksum(segmento.encode('ascii'))
 
-                udp.sendto(bytes(str(seq_num) + "|" + str(checksum) + "|" + segmento, 'ascii'), dest)
+            for i in range(0, len(arquivo_segmentado)):
+                checksum = calculate_checksum(arquivo_segmentado[i].encode('ascii'))
+
+                udp.sendto(bytes(str(seq_num) + "|" + str(checksum) + "|" + arquivo_segmentado[i], 'ascii'), dest)
 
                 ack, cliente = udp.recvfrom(1024)
-                while ack.decode('ascii').split('|')[0] != str(seq_num):
-                    print('enviando pacote corrompido...')
-                    udp.sendto(bytes(str(seq_num) + "|" + str(checksum) + "|" + segmento, 'ascii'), dest)
+
+                seq, ack = ack.decode('ascii').split('|')
+
+                while ack == 'NACK':
+                    print('enviando pacote corrompido...' + str(seq))
+                    udp.sendto(bytes(str(seq) + "|" + str(checksum) + "|" + arquivo_segmentado[int(seq)], 'ascii'), dest)
                     ack, cliente = udp.recvfrom(1024)
                 
                 seq_num += 1

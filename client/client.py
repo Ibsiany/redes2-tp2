@@ -31,7 +31,9 @@ def receber_arquivo(filename):
                 udp.sendto(bytes(str(expected_seq_num) + '|NACK', 'ascii'), dest)  # Send NACK
                 continue
             else:
-                buffer.append(base64_decode)
+                if int(seq_num) >= len(buffer):
+                    buffer.extend([None] * (int(seq_num) - len(buffer) + 1))
+                buffer[int(seq_num)] = base64_decode
                 print('PACOTE RECEBIDO')
                 udp.sendto(bytes(str(expected_seq_num) + '|ACK', 'ascii'), dest)  # Send ACK
                 expected_seq_num += 1
