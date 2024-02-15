@@ -55,6 +55,8 @@ def send_file(filename): # Função para enviar o arquivo selecionado
 
                 if(random.random() < LOSS):
                     udp.sendto(bytes(str(seq_num) + "|" + str(checksum) + "|" + 'currpted_data', 'ascii'), dest)
+                elif(random.random() < LOSS):
+                    print('Pacote perdido...' + str(seq_num))
                 else:
                     udp.sendto(bytes(str(seq_num) + "|" + str(checksum) + "|" + arquivo_segmentado[i], 'ascii'), dest)
                 
@@ -63,7 +65,7 @@ def send_file(filename): # Função para enviar o arquivo selecionado
                 seq, ack = ack.decode('ascii').split('|')
 
                 while ack == 'NACK':
-                    print('reenviando pacote corrompido...' + str(seq))
+                    print('reenviando pacote...' + str(seq))
                     udp.sendto(bytes(str(seq) + "|" + str(checksum) + "|" + arquivo_segmentado[int(seq)], 'ascii'), dest)
                     ack, cliente = udp.recvfrom(1024)
                 

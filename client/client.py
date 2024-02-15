@@ -33,7 +33,7 @@ def select_file(filename):  # Função para selectionar arquivo
     udp.sendto(bytes('ARQUIVO ENCONTRADO: ' + filename, 'ascii'), dest)
     send_file(filename)
 
-files = filesFuncs.listFiles();
+files = filesFuncs.listFiles()
 
 def send_file(filename): # Função para enviar o arquivo selecionado
     try:
@@ -55,6 +55,8 @@ def send_file(filename): # Função para enviar o arquivo selecionado
 
                 if(random.random() < LOSS):
                     udp.sendto(bytes(str(seq_num) + "|" + str(checksum) + "|" + 'currpted_data', 'ascii'), dest)
+                elif(random.random() < LOSS):
+                    print('Pacote perdido...' + str(seq_num))
                 else:
                     udp.sendto(bytes(str(seq_num) + "|" + str(checksum) + "|" + arquivo_segmentado[i], 'ascii'), dest)
                 
@@ -63,55 +65,7 @@ def send_file(filename): # Função para enviar o arquivo selecionado
                 seq, ack = ack.decode('ascii').split('|')
 
                 while ack == 'NACK':
-                    print('reenviando pacote corrompido...' + str(seq))
-                    udp.sendto(bytes(str(seq) + "|" + str(checksum) + "|" + arquivo_segmentado[int(seq)], 'ascii'), dest)
-                    ack, cliente = udp.recvfrom(1024)
-                
-                seq_num += 1
-            end_time = time.time()
-            print('ARQUIVO ENVIADO.')
-            
-            total_bytes_sent = os.path.getsize(diretorio+"/"+filename)
-            time_elapsed = end_time - start_time
-            throughput = total_bytes_sent / time_elapsed
-
-            print(f'Throughput: {throughput} bytes/segundos')
-
-            udp.sendto(bytes('FIM|FIM|FIM', 'ascii'), dest)
-                
-    except Exception  as e:
-        udp.sendto(bytes('FIM|FIM|FIM', 'ascii'), dest)
-        print(str(e))
-        raise Exception("Falha ao enviar arquivo {filename}.")
-
-    try:
-        with open(diretorio+"/"+filename, "rb") as arquivo:
-            conteudo_arquivo = arquivo.read()
-            arquivo_codificado = base64.b64encode(conteudo_arquivo)
-            
-            file = arquivo_codificado.decode("utf-8")
-            
-            arquivo_segmentado = filesFuncs.segmentar_arquivo(file)
-            print('Arquivo segmentado' + str(len(arquivo_segmentado)))
-            
-            seq_num = 0
-
-            start_time = time.time()
-            for i in range(0, len(arquivo_segmentado)):
-                time.sleep(RTT)
-                checksum = filesFuncs.calculate_checksum(arquivo_segmentado[i].encode('ascii'))
-
-                if(random.random() < LOSS):
-                    udp.sendto(bytes(str(seq_num) + "|" + str(checksum) + "|" + 'currpted_data', 'ascii'), dest)
-                else:
-                    udp.sendto(bytes(str(seq_num) + "|" + str(checksum) + "|" + arquivo_segmentado[i], 'ascii'), dest)
-                
-                ack, cliente = udp.recvfrom(1024)
-
-                seq, ack = ack.decode('ascii').split('|')
-
-                while ack == 'NACK':
-                    print('enviando pacote corrompido...' + str(seq))
+                    print('reenviando pacote...' + str(seq))
                     udp.sendto(bytes(str(seq) + "|" + str(checksum) + "|" + arquivo_segmentado[int(seq)], 'ascii'), dest)
                     ack, cliente = udp.recvfrom(1024)
                 
@@ -137,11 +91,19 @@ def receber_arquivo(filename):
     expected_seq_num = 0
     
     while base64_decode != 'FIM|FIM':
-        base64_string, cliente = udp.recvfrom(5 * 1024)
+        try:
+            base64_string, cliente = udp.recvfrom(5 * 1024)
+            udp.settimeout(10*RTT)
+        except Exception as e:
+            print('TIMEOUT, SOLICITANDO PACOTE AO SERVIDOR NOVAMENTE...')
+            udp.sendto(bytes(str(expected_seq_num) + '|NACK', 'ascii'), dest)
+            continue
+
         seq_num, base64_decode = base64_string.decode('ascii').split('|', 1)
-        
+
         if(base64_decode != 'FIM|FIM'):
             check_sum, base64_decode = base64_decode.split('|')
+            
             if(check_sum != str(filesFuncs.calculate_checksum(base64_decode.encode('ascii'))) or int(seq_num) != expected_seq_num):
                 print('PACOTE CORROMPIDO OU FORA DE ORDEM')
                 udp.sendto(bytes(str(expected_seq_num) + '|NACK', 'ascii'), dest)  # Send NACK
@@ -199,8 +161,8 @@ while(opcao != '3'):
             case "2":
                 try:
                     udp.sendto(bytes('list_file|', 'ascii'), dest)
-                    files, cliente = udp.recvfrom(5 * 1024 * 1024)
-                    print(cliente, files.decode('ascii'))
+                    list_files_received, cliente = udp.recvfrom(5 * 1024 * 1024)
+                    print(cliente, list_files_received.decode('ascii'))
  
                     arquivo = input('Digite o arquivo desejado: ')
                     udp.sendto(bytes('select_file|'+arquivo, 'ascii'), dest)
