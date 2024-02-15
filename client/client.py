@@ -7,8 +7,8 @@ import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 import filesFuncs
+
 HOST = 'localhost'  # Endereco IP do Servidor
 PORT = 5000  # Porta que o Servidor esta
 LOSS = 0.05  # Probabilidade de perda de pacotes
@@ -17,23 +17,21 @@ diretorio = './files'
 
 udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 dest = (HOST, PORT)
-diretorio = './files'
 
 # Definindo uma porta para ser ouvida
 udp.bind(('', 6000))
 
 print('Socket UDP na porta 6000')
 
+files = filesFuncs.listFiles()
+
 def select_file(filename):  # Função para selectionar arquivo
     if filename not in files:
         udp.sendto(bytes('FIM|FIM|FIM', 'ascii'), dest)
-        
         raise Exception('Arquivo nao encontrado.')
 
     udp.sendto(bytes('ARQUIVO ENCONTRADO: ' + filename, 'ascii'), dest)
     send_file(filename)
-
-files = filesFuncs.listFiles()
 
 def send_file(filename): # Função para enviar o arquivo selecionado
     try:
@@ -44,7 +42,7 @@ def send_file(filename): # Função para enviar o arquivo selecionado
             file = arquivo_codificado.decode("utf-8")
             
             arquivo_segmentado = filesFuncs.segmentar_arquivo(file)
-            print('Arquivo segmentado' + str(len(arquivo_segmentado)))
+            print('Arquivo segmentado ' + str(len(arquivo_segmentado)))
             
             seq_num = 0
 
@@ -95,7 +93,7 @@ def receber_arquivo(filename):
             base64_string, cliente = udp.recvfrom(5 * 1024)
             udp.settimeout(10*RTT)
         except Exception as e:
-            print('TIMEOUT, SOLICITANDO PACOTE AO SERVIDOR NOVAMENTE...')
+            print('TIMEOUT, SOLICITANDO PACOTE NOVAMENTE...')
             udp.sendto(bytes(str(expected_seq_num) + '|NACK', 'ascii'), dest)
             continue
 

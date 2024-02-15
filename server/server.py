@@ -28,12 +28,10 @@ files = filesFuncs.listFiles();
 def select_file(filename):  # Função para selectionar arquivo
     if filename not in files:
         udp.sendto(bytes('FIM|FIM|FIM', 'ascii'), dest)
-        
         raise Exception('Arquivo nao encontrado.')
 
     udp.sendto(bytes('ARQUIVO ENCONTRADO: ' + filename, 'ascii'), dest)
     send_file(filename)
-
 
 def send_file(filename): # Função para enviar o arquivo selecionado
     try:
@@ -44,7 +42,7 @@ def send_file(filename): # Função para enviar o arquivo selecionado
             file = arquivo_codificado.decode("utf-8")
             
             arquivo_segmentado = filesFuncs.segmentar_arquivo(file)
-            print('Arquivo segmentado' + str(len(arquivo_segmentado)))
+            print('Arquivo segmentado ' + str(len(arquivo_segmentado)))
             
             seq_num = 0
 
@@ -85,23 +83,25 @@ def send_file(filename): # Função para enviar o arquivo selecionado
         print(str(e))
         raise Exception("Falha ao enviar arquivo {filename}.")
 
-def check_password(sentence): # Função de verificação de senha
-    if(sentence == PASSWORD):
-        udp.sendto(bytes('SENHA OK', 'ascii'), dest)
-    else:
-        udp.sendto(bytes('SENHA INCORRETA', 'ascii'), dest)
-
 def receber_arquivo(filename):
     buffer = []
     base64_decode = ''
     expected_seq_num = 0
     
     while base64_decode != 'FIM|FIM':
-        base64_string, cliente = udp.recvfrom(5 * 1024)
+        try:
+            base64_string, cliente = udp.recvfrom(5 * 1024)
+            udp.settimeout(10*RTT)
+        except Exception as e:
+            print('TIMEOUT, SOLICITANDO PACOTE NOVAMENTE...')
+            udp.sendto(bytes(str(expected_seq_num) + '|NACK', 'ascii'), dest)
+            continue
+
         seq_num, base64_decode = base64_string.decode('ascii').split('|', 1)
-        
+
         if(base64_decode != 'FIM|FIM'):
             check_sum, base64_decode = base64_decode.split('|')
+            
             if(check_sum != str(filesFuncs.calculate_checksum(base64_decode.encode('ascii'))) or int(seq_num) != expected_seq_num):
                 print('PACOTE CORROMPIDO OU FORA DE ORDEM')
                 udp.sendto(bytes(str(expected_seq_num) + '|NACK', 'ascii'), dest)  # Send NACK
@@ -128,21 +128,30 @@ def receber_arquivo(filename):
         print ("Arquivo salvo em: " + caminho_completo)
     except Exception as e:
         raise Exception("Erro ao salvar o arquivo:"+str(e))
-    
+
 def list_files():
     list = ', '.join(filesFuncs.listFiles())
     udp.sendto(bytes(list, 'ascii'), dest)
+    
+def check_password(sentence): # Função de verificação de senha
+    if(sentence == PASSWORD):
+        udp.sendto(bytes('SENHA OK', 'ascii'), dest)
+    else:
+        udp.sendto(bytes('SENHA INCORRETA', 'ascii'), dest)
 
 while True:
     try:
-        message, cliente = udp.recvfrom(1024)
+        try:
+            message, cliente = udp.recvfrom(1024)
+            udp.settimeout(120)
+        except Exception as e:
+            print('AGUARDANDO INSTRUÇÃO...')
+            continue
         sentence = message.decode('ascii')
         print(cliente, sentence)    
 
-        idetify = sentence.split("|")[0]
-        message = sentence.split('|')[1]
+        idetify, message = sentence.split("|")
         
-
         match idetify:
             case "password":
                 check_password(message)
@@ -151,6 +160,8 @@ while True:
             case 'select_file':
                 select_file(message)
             case "received_file":
+                msg_arquivo, cliente = udp.recvfrom(5 * 1024 * 1024)
+                print(cliente, msg_arquivo.decode('ascii'))
                 receber_arquivo(message)
     except Exception as e:
         udp.sendto(bytes('Servidor com erro.', 'ascii'), dest)
