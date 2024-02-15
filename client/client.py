@@ -144,6 +144,7 @@ while(opcao != '3'):
                 if(msg_confirmation.decode('ascii') == 'SENHA INCORRETA'):
                     print('Conexao finalizada, senha incorreta!')
                     udp.close()
+                    exit()
                 else:
                     list = ', '.join(filesFuncs.listFiles())
                     print(list)
